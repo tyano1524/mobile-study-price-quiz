@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta name="robots" content="noindex, nofollow">
+  <meta charset="UTF-8">
+  <title>料金暗記ドリル</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: sans-serif;
+      background: #f4f6fb;
+      color: #222;
+    }
+
+    .app {
+      max-width: 560px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      margin: 0 0 8px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    select {
+      width: 100%;
+      font-size: 16px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background: white;
+    }
+
+    .tag {
+      display: inline-block;
+      background: #e7efff;
+      color: #234;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      margin: 4px 4px 12px 0;
+    }
+
+    .question {
+      font-size: 21px;
+      font-weight: bold;
+      line-height: 1.6;
+      margin: 16px 0;
+    }
+
+    .choice {
+      width: 100%;
+      font-size: 18px;
+      padding: 14px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 14px;
+      color: #222;
+      background: #eef2ff;
+      text-align: left;
+    }
+
+    .choice:hover {
+      background: #dfe7ff;
+    }
+
+    .correctChoice {
+      background: #bfe8cf !important;
+    }
+
+    .wrongChoice {
+      background: #f3b8b8 !important;
+    }
+
+    .result {
+      display: none;
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 14px;
+      background: #f0f0f0;
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    .next {
+      width: 100%;
+      font-size: 18px;
+      padding: 14px;
+      margin-top: 14px;
+      border: none;
+      border-radius: 14px;
+      color: white;
+      background: #666;
+    }
+
+    .score {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 15px;
+      color: #555;
+    }
+
+    .empty {
+      font-size: 17px;
+      line-height: 1.7;
+      background: #fff4d6;
+      padding: 14px;
+      border-radius: 14px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <h1>料金暗記ドリル</h1>
+    <div class="small">公開情報ベースの料金暗記用</div>
+
+   <select id="companyFilter" onchange="resetQuiz()">
+      <option value="all">全社</option>
+      <option value="au">au</option>
+      <option value="UQ mobile">UQ mobile</option>
+      <option value="SoftBank">SoftBank</option>
+      <option value="Y!mobile">Y!mobile</option>
+      <option value="docomo">docomo</option>
+      <option value="ahamo">ahamo</option>
+      <option value="楽天モバイル">楽天モバイル</option>
+    </select>
+
+   <select id="serviceFilter" onchange="resetQuiz()">
+      <option value="all">全部</option>
+      <option value="通信料金プラン">通信料金プラン</option>
+      <option value="割引">割引</option>
+      <option value="期間限定割引">期間限定割引</option>
+      <option value="ひかり">ひかり</option>
+      <option value="ホームルーター">ホームルーター</option>
+    </select>
+
+    <div>
+      <span class="tag" id="companyTag"></span>
+      <span class="tag" id="serviceTag"></span>
+    </div>
+
+    <div class="question" id="question"></div>
+    <div id="choices"></div>
+    <div class="result" id="result"></div>
+
+    <button class="next" onclick="nextQuestion()">次の問題</button>
+<button class="next" onclick="resetQuiz()">出題リセット</button>
+    <div class="score" id="score"></div>
+  </div>
+
+<script src="questions_au.js"></script>
+<script src="questions_uq.js"></script>
+<script src="questions_softbank.js"></script>
+<script src="questions_ymobile.js"></script>
+<script src="questions_docomo.js"></script>
+<script src="questions_rakuten.js"></script>
+<script src="questions_hikari.js"></script>
+<script src="questions_router.js"></script>
+
+ <script>
+  const data = [
+    ...(typeof auQuestions !== "undefined" ? auQuestions : []),
+    ...(typeof uqQuestions !== "undefined" ? uqQuestions : []),
+    ...(typeof softbankQuestions !== "undefined" ? softbankQuestions : []),
+    ...(typeof ymobileQuestions !== "undefined" ? ymobileQuestions : []),
+    ...(typeof docomoQuestions !== "undefined" ? docomoQuestions : []),
+    ...(typeof rakutenQuestions !== "undefined" ? rakutenQuestions : []),
+    ...(typeof hikariQuestions !== "undefined" ? hikariQuestions : []),
+    ...(typeof routerQuestions !== "undefined" ? routerQuestions : [])
+  ];
+
+  let current = null;
+  let correctCount = 0;
+  let wrongCount = 0;
+  let answered = false;
+  let remainingQuestions = [];
+  let currentFilterKey = "";
+
+  function shuffleArray(array) {
+    const copied = [...array];
+
+    for (let i = copied.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = copied[i];
+      copied[i] = copied[j];
+      copied[j] = temp;
+    }
+
+    return copied;
+  }
+
+  function getFilteredData() {
+    const company = document.getElementById("companyFilter").value;
+    const service = document.getElementById("serviceFilter").value;
+
+    return data.filter(item => {
+      const companyMatch = company === "all" || item.company === company;
+      const serviceMatch = service === "all" || item.service === service;
+      return companyMatch && serviceMatch;
+    });
+  }
+
+  function getFilterKey() {
+    const company = document.getElementById("companyFilter").value;
+    const service = document.getElementById("serviceFilter").value;
+    return company + "|" + service;
+  }
+
+  function resetQuiz() {
+    const filtered = getFilteredData();
+
+    currentFilterKey = getFilterKey();
+    remainingQuestions = shuffleArray(filtered);
+
+    document.getElementById("choices").innerHTML = "";
+    document.getElementById("result").style.display = "none";
+    document.getElementById("result").textContent = "";
+    answered = false;
+
+    nextQuestion();
+  }
+
+  function nextQuestion() {
+    const filterKey = getFilterKey();
+    const choicesArea = document.getElementById("choices");
+    const resultArea = document.getElementById("result");
+
+    if (filterKey !== currentFilterKey) {
+      resetQuiz();
+      return;
+    }
+
+    choicesArea.innerHTML = "";
+    resultArea.style.display = "none";
+    resultArea.textContent = "";
+    answered = false;
+
+    if (remainingQuestions.length === 0) {
+      document.getElementById("companyTag").textContent = "";
+      document.getElementById("serviceTag").textContent = "";
+      document.getElementById("question").innerHTML =
+        '<div class="empty">この出題範囲は一巡したよ。もう一度やるなら「出題リセット」を押してね。</div>';
+      updateScore();
+      return;
+    }
+
+    current = remainingQuestions.shift();
+
+    document.getElementById("companyTag").textContent = current.company;
+    document.getElementById("serviceTag").textContent = current.service;
+    document.getElementById("question").textContent = "Q. " + current.question;
+
+    const shuffledChoices = shuffleArray(current.choices);
+
+    shuffledChoices.forEach(choice => {
+      const button = document.createElement("button");
+      button.className = "choice";
+      button.textContent = choice;
+      button.onclick = function() {
+        checkAnswer(button, choice);
+      };
+      choicesArea.appendChild(button);
+    });
+
+    updateScore();
+  }
+
+  function checkAnswer(button, selectedChoice) {
+    if (answered) {
+      return;
+    }
+
+    answered = true;
+
+    const allButtons = document.querySelectorAll(".choice");
+    const resultArea = document.getElementById("result");
+
+    allButtons.forEach(btn => {
+      if (btn.textContent === current.answer) {
+        btn.classList.add("correctChoice");
+      }
+    });
+
+    if (selectedChoice === current.answer) {
+      correctCount++;
+      button.classList.add("correctChoice");
+
+      if (current.memo && current.memo.trim() !== "") {
+        resultArea.textContent = "正解。 " + current.memo;
+      } else {
+        resultArea.textContent = "正解。";
+      }
+    } else {
+      wrongCount++;
+      button.classList.add("wrongChoice");
+
+      if (current.memo && current.memo.trim() !== "") {
+        resultArea.textContent =
+          "不正解。正解は「" + current.answer + "」。 " + current.memo;
+      } else {
+        resultArea.textContent =
+          "不正解。正解は「" + current.answer + "」。";
+      }
+    }
+
+    resultArea.style.display = "block";
+    updateScore();
+  }
+
+  function updateScore() {
+    document.getElementById("score").textContent =
+      "正解：" + correctCount +
+      " / 不正解：" + wrongCount +
+      " / 残り：" + remainingQuestions.length +
+      " / 登録問題数：" + data.length;
+  }
+
+  resetQuiz();
+</script>
+  </script>
+</body>
+</html>
